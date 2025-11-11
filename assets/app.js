@@ -271,28 +271,28 @@ function runSimulation(config) {
 
     // 1. Rohling vorbereiten und Ring formen
     manual(
-      "Rohling vorbereiten & formen",
+      "Rohling holen & zum Ring verbinden",
       30,
-      "Rohling aufnehmen, zuschneiden und zum Ring schließen."
+      "Rohling aufnehmen, vorbereiten und zum Ring schließen."
     );
 
     // 2. Montage auf Adapterkern
     manual(
-      "Ring auf Adapterkern montieren",
+      "Ring auf Adapterkern aufbringen",
       20,
       "Ring aufsetzen, ausrichten und sichern."
     );
 
     // 3. Transport und Übergabe an die Presse
     manual(
-      "Transport zur Presse & Auflegen",
+      "Adapterkern zur Presse bringen & Ring übertragen",
       30,
-      "Adapterkern zur Vulkanisationspresse bringen und Ring übergeben."
+      "Adapterkern zur Vulkanisationspresse bringen und Ring auf den Pressendorn legen."
     );
 
     // 4. Start des Presszyklus (Bedienhandlung + Maschinenlauf)
     manual(
-      "Presse bedienen & Zyklus starten",
+      "Presszyklus starten",
       10,
       "Bedienelemente prüfen, Pressprogramm starten."
     );
@@ -304,39 +304,39 @@ function runSimulation(config) {
       workerTime
     );
 
-    // 5. Besäumen des vorherigen Rings
+    // 5. Während der Presslaufzeit den vulkanisierten Ring besäumen
     const startAfterPrevPress = Math.max(workerTime, previousPressComplete);
     manual(
-      "Besäumen vorheriger Ring",
+      "Vulkanisierten Ring besäumen",
       45,
-      "Grate entfernen und Kontur prüfen.",
+      "Grate entfernen und den Vulkanisationsring nachbearbeiten.",
       { start: startAfterPrevPress }
     );
 
-    // 6. Abkühlung
+    // 6. Ring zum Abkühlen bringen
     manual(
       "Ring zur Kühlstation bringen",
       20,
-      "Besäumten Ring an die Kühlposition übergeben."
+      "Besäumten Ring zur Kühlung transportieren."
     );
 
-    // 7. Lösung & Verpackung
+    // 7. Ring mit Lösung behandeln und verpacken
     manual(
-      "Lösung & Verpackung",
+      "Ring mit Lösung behandeln & verpacken",
       40,
-      "Abgekühlten Ring benetzen, prüfen und verpacken."
+      "Ring in Lösung tauchen, kontrollieren und anschließend verpacken."
     );
 
-    // 8. Übergabe an Lösungsauftrag
+    // 8. Gerauten Ring zur Lösungseinheit bringen
     const startSolutionHandOver = Math.max(workerTime, machineAvailability["Lösungseinheit"]);
     manual(
-      "Ring von der Raumaschine entnehmen",
+      "Gerauten Ring zum Lösungsauftrag bringen",
       25,
-      "Geraute Ringe abnehmen und zur Lösungseinheit tragen.",
+      "Geraute Ringe von der Raumaschine abnehmen und zur Lösungseinheit tragen.",
       { start: startSolutionHandOver }
     );
 
-    // 9. Start des Lösungsauftrags (Bedienung + Maschinenlauf)
+    // 9. Lösungsauftrag starten (Bedienung + Maschinenlauf)
     manual(
       "Lösungsauftrag starten",
       10,
@@ -350,16 +350,21 @@ function runSimulation(config) {
       workerTime
     );
 
-    // 10. Vorbereitung nächster Rauvorgang
+    // 10. Abgekühlten Ring zur Raumaschine bringen
     const startRoughPrep = Math.max(workerTime, machineAvailability["Rauautomat"]);
     manual(
-      "Ring zur Raumaschine bringen",
+      "Abgekühlten Ring zur Raumaschine bringen",
       20,
-      "Vorbereiteter Ring für Rauvorgang positionieren.",
+      "Ring aus der Kühlung holen und an der Raumaschine einlegen.",
       { start: startRoughPrep }
     );
 
-    // 11. Start Rauvorgang mit Folienauftrag (Maschinenlauf)
+    // 11. Start Rauvorgang mit Folienauftrag (Bedienung + Maschinenlauf)
+    manual(
+      "Rauvorgang mit Folienauftrag starten",
+      10,
+      "Rauprogramm inklusive Folienauftrag konfigurieren und starten."
+    );
     machine(
       "Rauautomat",
       "Rauvorgang mit Folienauftrag",
@@ -368,8 +373,13 @@ function runSimulation(config) {
       workerTime
     );
 
-    // 12. Optionaler weiterer Rauvorgang
+    // 12. Optional: zusätzlichen Rauvorgang starten
     if (config.includeOptional) {
+      manual(
+        "Zusätzlichen Rauvorgang starten",
+        10,
+        "Optionalen Rauvorgang ohne Folie starten."
+      );
       machine(
         "RauautomatPlus",
         "Zusätzlicher Rauvorgang",
@@ -382,7 +392,7 @@ function runSimulation(config) {
     // 13. Entnahme aus der Presse (nach Ablauf des Zyklus)
     const unloadStart = Math.max(workerTime, pressJob.end);
     manual(
-      "Ring aus Presse entnehmen",
+      "Ring aus Presse entnehmen & zum Säumgerät bringen",
       30,
       "Ring nach Zyklusende entnehmen und dem Säumgerät zuführen.",
       { start: unloadStart }
