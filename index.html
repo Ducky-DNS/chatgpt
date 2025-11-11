@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simulation: Manueller Produktionsablauf zur Ringherstellung</title>
+    <link rel="stylesheet" href="assets/style.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <div class="page-header__inner">
+        <h1>Simulation: Manueller Produktionsablauf zur Ringherstellung</h1>
+        <p class="lead">
+          Dieses interaktive Tool bildet den Arbeitszyklus eines Mitarbeiters ab, der
+          Rohlinge vorbereitet, eine Vulkanisationspresse bedient und parallel mehrere
+          Nachbearbeitungsschritte steuert. Starte eine Simulation, um Auslastungen,
+          Wartezeiten und Maschinenbelegungen zu analysieren.
+        </p>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Einstellungen</h2>
+        <form id="controls" class="controls" autocomplete="off">
+          <div class="controls__group">
+            <label for="cycle-count">Anzahl der Zyklen</label>
+            <input
+              id="cycle-count"
+              name="cycle-count"
+              type="number"
+              min="1"
+              max="15"
+              value="3"
+              required
+            />
+          </div>
+          <div class="controls__group controls__group--checkbox">
+            <input type="checkbox" id="include-optional" checked />
+            <label for="include-optional">Zusätzlichen Rauvorgang berücksichtigen</label>
+          </div>
+          <fieldset class="controls__fieldset">
+            <legend>Prozessdauern (in Sekunden)</legend>
+            <div class="controls__grid">
+              <label for="press-duration">Vulkanisationspresse</label>
+              <input id="press-duration" type="number" min="60" value="300" />
+
+              <label for="solution-duration">Lösungsvorgang</label>
+              <input id="solution-duration" type="number" min="10" value="180" />
+
+              <label for="roughening-duration">Rauvorgang mit Folie</label>
+              <input id="roughening-duration" type="number" min="30" value="120" />
+
+              <label for="extra-roughening-duration">Zusatz-Rauvorgang</label>
+              <input id="extra-roughening-duration" type="number" min="30" value="120" />
+            </div>
+          </fieldset>
+          <button type="submit" class="button">Simulation starten</button>
+        </form>
+      </section>
+
+      <section id="results" class="card card--results" hidden>
+        <h2>Ergebnisse</h2>
+        <div id="metrics" class="metrics"></div>
+        <div id="timeline" class="timeline"></div>
+        <div id="gantt" class="gantt"></div>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      <div class="page-footer__inner">
+        <p>
+          Die Simulation basiert auf festen Arbeitsschritten (Rohling vorbereiten,
+          Montage, Presszyklus, Nachbearbeitung, Verpackung). Alle Angaben erfolgen in
+          Sekunden. Die Visualisierung zeigt sowohl manuelle Aktivitäten als auch
+          parallele Maschinenjobs.
+        </p>
+      </div>
+    </footer>
+
+    <template id="metric-template">
+      <article class="metric">
+        <h3></h3>
+        <p class="metric__value"></p>
+        <p class="metric__hint"></p>
+      </article>
+    </template>
+
+    <template id="timeline-table-template">
+      <div class="timeline-table">
+        <header class="timeline-table__header">
+          <h3></h3>
+        </header>
+        <table>
+          <thead>
+            <tr>
+              <th>Schritt</th>
+              <th>Start (s)</th>
+              <th>Ende (s)</th>
+              <th>Dauer (s)</th>
+              <th>Typ</th>
+              <th>Beschreibung</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </template>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>
