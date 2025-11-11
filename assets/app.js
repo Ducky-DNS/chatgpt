@@ -21,6 +21,9 @@ exportButton.disabled = true;
 const metricTemplate = document.getElementById("metric-template");
 const timelineTemplate = document.getElementById("timeline-table-template");
 
+const MIN_GANTT_WIDTH = 3200;
+const GANTT_PX_PER_SECOND = 6;
+
 const PRESETS = {
   standard: {
     press: 300,
@@ -585,6 +588,11 @@ function renderGantt(simulation) {
 
   const content = document.createElement("div");
   content.className = "gantt__content";
+  const ganttWidth = Math.max(
+    MIN_GANTT_WIDTH,
+    simulation.totalDuration * GANTT_PX_PER_SECOND
+  );
+  content.style.width = `${ganttWidth}px`;
 
   const header = document.createElement("div");
   header.className = "gantt__header";

@@ -240,7 +240,7 @@ a {
 }
 
 .gantt__content {
-  min-width: 1600px;
+  min-width: 3200px;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
