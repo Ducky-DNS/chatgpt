@@ -83,6 +83,22 @@ a {
   font-size: 0.85rem;
 }
 
+.controls__status {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  min-height: 1.2em;
+}
+
+.controls__status[data-tone="error"] {
+  color: #c81e1e;
+}
+
+.controls__status[data-tone="success"] {
+  color: #047857;
+}
+
 .controls__label--disabled {
   color: var(--muted);
   opacity: 0.6;

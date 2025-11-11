@@ -6,6 +6,7 @@ const ganttContainer = document.getElementById("gantt");
 const cycleInput = document.getElementById("cycle-count");
 const presetSelect = document.getElementById("duration-preset");
 const includeOptionalCheckbox = document.getElementById("include-optional");
+const runButton = document.getElementById("run-simulation");
 const durationInputs = {
   press: document.getElementById("press-duration"),
   solution: document.getElementById("solution-duration"),
@@ -14,6 +15,7 @@ const durationInputs = {
 };
 const exportButton = document.getElementById("export-csv");
 const extraRougheningLabel = document.querySelector("label[for='extra-roughening-duration']");
+const statusMessage = document.getElementById("controls-status");
 exportButton.disabled = true;
 
 const metricTemplate = document.getElementById("metric-template");
@@ -65,6 +67,11 @@ let lastSimulation = null;
 function invalidateSimulation() {
   lastSimulation = null;
   exportButton.disabled = true;
+  if (resultsSection.hidden || resultsSection.hasAttribute("hidden")) {
+    setStatus("");
+  } else {
+    setStatus("Einstellungen geändert. Bitte Simulation erneut starten.");
+  }
 }
 
 function updateOptionalState() {
@@ -110,18 +117,51 @@ exportButton.addEventListener("click", () => {
   downloadCsv(csv, `ring-simulation_${timestamp}.csv`);
 });
 
-controlsForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const config = readConfig();
-  const simulation = runSimulation(config);
-  renderMetrics(simulation);
-  renderTimelines(simulation);
-  renderGantt(simulation);
-  lastSimulation = simulation;
-  exportButton.disabled = false;
-  resultsSection.hidden = false;
-  resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-});
+if (controlsForm) {
+  controlsForm.addEventListener("submit", handleSimulationRun);
+}
+
+if (runButton) {
+  runButton.addEventListener("click", handleSimulationRun);
+}
+
+function handleSimulationRun(event) {
+  if (event) {
+    event.preventDefault();
+  }
+
+  try {
+    const config = readConfig();
+    const simulation = runSimulation(config);
+    renderMetrics(simulation);
+    renderTimelines(simulation);
+    renderGantt(simulation);
+    lastSimulation = simulation;
+    exportButton.disabled = false;
+    resultsSection.hidden = false;
+    resultsSection.removeAttribute("hidden");
+    resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    setStatus("Simulation erfolgreich aktualisiert.", "success");
+  } catch (error) {
+    console.error("Simulation failed", error);
+    setStatus("Simulation konnte nicht gestartet werden. Siehe Konsole für Details.", "error");
+  }
+}
+
+function setStatus(message, tone = "info") {
+  if (!statusMessage) return;
+  if (!message) {
+    statusMessage.textContent = "";
+    delete statusMessage.dataset.tone;
+    return;
+  }
+  statusMessage.textContent = message;
+  if (tone) {
+    statusMessage.dataset.tone = tone;
+  } else {
+    delete statusMessage.dataset.tone;
+  }
+}
 
 function applyPreset(name) {
   const preset = PRESETS[name];
