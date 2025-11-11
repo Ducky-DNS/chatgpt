@@ -234,9 +234,17 @@ a {
 }
 
 .gantt {
+  overflow-x: auto;
+  margin-bottom: 2rem;
+  padding-bottom: 0.5rem;
+}
+
+.gantt__content {
+  min-width: 1600px;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
+  padding-right: 1rem;
 }
 
 .gantt__header {

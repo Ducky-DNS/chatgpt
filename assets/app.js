@@ -133,9 +133,9 @@ function handleSimulationRun(event) {
   try {
     const config = readConfig();
     const simulation = runSimulation(config);
+    renderGantt(simulation);
     renderMetrics(simulation);
     renderTimelines(simulation);
-    renderGantt(simulation);
     lastSimulation = simulation;
     exportButton.disabled = false;
     resultsSection.hidden = false;
@@ -583,6 +583,9 @@ function createTimelineRow(event) {
 function renderGantt(simulation) {
   ganttContainer.innerHTML = "";
 
+  const content = document.createElement("div");
+  content.className = "gantt__content";
+
   const header = document.createElement("div");
   header.className = "gantt__header";
   const title = document.createElement("h3");
@@ -590,7 +593,7 @@ function renderGantt(simulation) {
   const subtitle = document.createElement("p");
   subtitle.textContent = `Zeitraum: ${formatSeconds(simulation.totalDuration)} (${simulation.totalDuration.toFixed(0)} s)`;
   header.append(title, subtitle);
-  ganttContainer.appendChild(header);
+  content.appendChild(header);
 
   const axis = document.createElement("div");
   axis.className = "gantt__axis";
@@ -608,7 +611,7 @@ function renderGantt(simulation) {
     axisLabels.appendChild(label);
   }
   axis.appendChild(axisLabels);
-  ganttContainer.appendChild(axis);
+  content.appendChild(axis);
 
   const rowsWrapper = document.createElement("div");
   rowsWrapper.className = "gantt__rows";
@@ -629,9 +632,11 @@ function renderGantt(simulation) {
     rowsWrapper.appendChild(createGanttRow(machine.label, bars, simulation.totalDuration));
   });
 
-  ganttContainer.appendChild(rowsWrapper);
+  content.appendChild(rowsWrapper);
 
-  ganttContainer.appendChild(createLegend());
+  content.appendChild(createLegend());
+
+  ganttContainer.appendChild(content);
 }
 
 function mergeWorkerEvents(manualEvents, idleSegments) {
