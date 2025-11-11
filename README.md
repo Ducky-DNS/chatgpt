@@ -10,13 +10,14 @@ Browser als Kennzahlen, Timeline-Tabellen und Gantt-Diagramm visualisiert.
 ## Funktionsumfang
 
 * Interaktive Eingabe der Anzahl zu simulierender Zyklen sowie zentraler
-  Prozessdauern (Presse, Lösung, optionale Rauvorgänge).
+  Prozessdauern (Presse, Lösung, Rauvorgang mit Folienauftrag).
 * Vordefinierte Zeitprofile (Standard, lange Presse, Maschinenfokus,
   beschleunigter Ablauf) zur schnellen Szenarioanalyse.
 * Abbildung sämtlicher Handgriffe des Mitarbeiters inklusive Wartezeiten und
   Leerlauf.
-* Automatische Maschinenabläufe für Vulkanisation, Lösung, Rau- und
-  Zusatz-Rauvorgang mit Ressourcenblockierung.
+* Automatische Maschinenabläufe für Vulkanisation, Lösung und Rauprozess –
+  inklusive der jeweiligen Abhängigkeiten zwischen Besäumen, Kühlen,
+  Rauen, Lösung und Verpackung.
 * Kennzahlenkarten (Gesamtdauer, Auslastungen, Zyklusmittelwerte).
 * Tabellenansicht der Mitarbeiter- und Maschinenereignisse.
 * Farblich hervorgehobenes Gantt-Diagramm mit Legende und Zeitachse.

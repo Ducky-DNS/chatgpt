@@ -240,7 +240,7 @@ a {
 }
 
 .gantt__content {
-  min-width: 3200px;
+  min-width: 4000px;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -258,7 +258,8 @@ a {
 .gantt__axis {
   position: relative;
   margin-left: 140px;
-  height: 24px;
+  height: 32px;
+  margin-bottom: 0.5rem;
 }
 
 .gantt__axis-scale {
@@ -267,13 +268,27 @@ a {
   border-top: 1px solid var(--border);
 }
 
+.gantt__axis-tick {
+  position: absolute;
+  top: 0;
+  height: 12px;
+  border-left: 1px solid var(--border);
+  transform: translateX(-50%);
+}
+
 .gantt__axis-labels {
   position: absolute;
-  inset: 0;
-  display: flex;
-  justify-content: space-between;
+  inset: 16px 0 0;
   font-size: 0.75rem;
   color: var(--muted);
+  pointer-events: none;
+}
+
+.gantt__axis-labels span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .gantt__rows {
@@ -338,10 +353,6 @@ a {
 
 .gantt-bar--Rauautomat {
   background: #caffbf;
-}
-
-.gantt-bar--RauautomatPlus {
-  background: #c0fdfb;
 }
 
 .gantt-legend {

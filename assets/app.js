@@ -5,53 +5,42 @@ const timelineContainer = document.getElementById("timeline");
 const ganttContainer = document.getElementById("gantt");
 const cycleInput = document.getElementById("cycle-count");
 const presetSelect = document.getElementById("duration-preset");
-const includeOptionalCheckbox = document.getElementById("include-optional");
 const runButton = document.getElementById("run-simulation");
 const durationInputs = {
   press: document.getElementById("press-duration"),
   solution: document.getElementById("solution-duration"),
   roughening: document.getElementById("roughening-duration"),
-  extraRoughening: document.getElementById("extra-roughening-duration"),
 };
 const exportButton = document.getElementById("export-csv");
-const extraRougheningLabel = document.querySelector("label[for='extra-roughening-duration']");
 const statusMessage = document.getElementById("controls-status");
 exportButton.disabled = true;
 
 const metricTemplate = document.getElementById("metric-template");
 const timelineTemplate = document.getElementById("timeline-table-template");
 
-const MIN_GANTT_WIDTH = 3200;
-const GANTT_PX_PER_SECOND = 6;
+const MIN_GANTT_WIDTH = 4000;
+const GANTT_PX_PER_SECOND = 10;
 
 const PRESETS = {
   standard: {
     press: 300,
     solution: 180,
     roughening: 120,
-    extraRoughening: 120,
-    includeOptional: true,
   },
   "lange-presse": {
     press: 360,
     solution: 200,
     roughening: 120,
-    extraRoughening: 120,
-    includeOptional: true,
   },
   maschinenfokus: {
     press: 300,
     solution: 240,
     roughening: 180,
-    extraRoughening: 180,
-    includeOptional: true,
   },
   schnell: {
     press: 240,
     solution: 150,
     roughening: 90,
-    extraRoughening: 60,
-    includeOptional: false,
   },
 };
 
@@ -61,7 +50,6 @@ const RESOURCE_CLASS = {
   Presse: "Presse",
   "Lösungseinheit": "Loesungseinheit",
   Rauautomat: "Rauautomat",
-  RauautomatPlus: "RauautomatPlus",
 };
 
 let isApplyingPreset = false;
@@ -74,14 +62,6 @@ function invalidateSimulation() {
     setStatus("");
   } else {
     setStatus("Einstellungen geändert. Bitte Simulation erneut starten.");
-  }
-}
-
-function updateOptionalState() {
-  const disabled = !includeOptionalCheckbox.checked;
-  durationInputs.extraRoughening.disabled = disabled;
-  if (extraRougheningLabel) {
-    extraRougheningLabel.classList.toggle("controls__label--disabled", disabled);
   }
 }
 
@@ -99,14 +79,6 @@ Object.values(durationInputs).forEach((input) => {
     }
     invalidateSimulation();
   });
-});
-
-includeOptionalCheckbox.addEventListener("change", () => {
-  if (!isApplyingPreset) {
-    presetSelect.value = "custom";
-  }
-  invalidateSimulation();
-  updateOptionalState();
 });
 
 cycleInput.addEventListener("input", () => {
@@ -173,30 +145,21 @@ function applyPreset(name) {
   durationInputs.press.value = preset.press;
   durationInputs.solution.value = preset.solution;
   durationInputs.roughening.value = preset.roughening;
-  durationInputs.extraRoughening.value = preset.extraRoughening;
-  if (typeof preset.includeOptional === "boolean") {
-    includeOptionalCheckbox.checked = preset.includeOptional;
-  }
   isApplyingPreset = false;
-  updateOptionalState();
 }
 
 function readConfig() {
   const cycles = clampNumber(parseInt(cycleInput.value, 10), 1, 15);
-  const includeOptional = includeOptionalCheckbox.checked;
   const pressDuration = clampNumber(parseInt(durationInputs.press.value, 10), 60, 3600);
   const solutionDuration = clampNumber(parseInt(durationInputs.solution.value, 10), 10, 3600);
   const rougheningDuration = clampNumber(parseInt(durationInputs.roughening.value, 10), 30, 3600);
-  const extraRougheningDuration = clampNumber(parseInt(durationInputs.extraRoughening.value, 10), 30, 3600);
 
   return {
     cycles,
-    includeOptional,
     durations: {
       press: pressDuration,
       solution: solutionDuration,
       roughening: rougheningDuration,
-      extraRoughening: extraRougheningDuration,
     },
   };
 }
@@ -207,7 +170,7 @@ function clampNumber(value, min, max) {
 }
 
 function runSimulation(config) {
-  const machineNames = ["Presse", "Lösungseinheit", "Rauautomat", "RauautomatPlus"];
+  const machineNames = ["Presse", "Lösungseinheit", "Rauautomat"];
   const machineEvents = Object.fromEntries(machineNames.map((name) => [name, []]));
   const machineAvailability = Object.fromEntries(machineNames.map((name) => [name, 0]));
   const machineBusy = Object.fromEntries(machineNames.map((name) => [name, 0]));
@@ -218,188 +181,264 @@ function runSimulation(config) {
   let workerTime = 0;
   let workerActiveStart = null;
   let totalManualTime = 0;
-  let previousPressComplete = 0;
+  let ringCounter = 0;
 
-  for (let cycle = 1; cycle <= config.cycles; cycle += 1) {
-    const labelPrefix = `Zyklus ${cycle}`;
+  const readyForBesaeumen = [];
+  const readyForCooling = [];
+  const readyForRoughTransport = [];
+  const readyForRoughStart = [];
+  const readyForSolutionTransport = [];
+  const readyForPackaging = [];
+  const ringsAwaitingUnload = [];
 
-    const manual = (label, duration, description, options = {}) => {
-      const start = Math.max(options.start ?? workerTime, workerTime);
-      const end = start + duration;
-      workerTime = end;
-      const entry = {
-        resource: "Mitarbeiter",
-        label: `${labelPrefix}: ${label}`,
-        shortLabel: label,
-        start,
-        end,
-        duration,
-        type: "Manuell",
-        description,
-        cycle,
-      };
-      workerEvents.push(entry);
-      allEvents.push(entry);
-      totalManualTime += duration;
-      if (workerActiveStart === null) {
-        workerActiveStart = start;
-      }
-      return entry;
+  const manual = (cycle, label, duration, description, options = {}) => {
+    const start = Math.max(options.start ?? workerTime, workerTime);
+    const end = start + duration;
+    workerTime = end;
+    const entry = {
+      resource: "Mitarbeiter",
+      label: `Zyklus ${cycle}: ${label}`,
+      shortLabel: label,
+      start,
+      end,
+      duration,
+      type: "Manuell",
+      description,
+      cycle,
     };
+    workerEvents.push(entry);
+    allEvents.push(entry);
+    totalManualTime += duration;
+    if (workerActiveStart === null) {
+      workerActiveStart = start;
+    }
+    return entry;
+  };
 
-    const machine = (resource, label, duration, description, requestedStart) => {
-      const start = Math.max(requestedStart ?? workerTime, machineAvailability[resource]);
-      const end = start + duration;
-      const entry = {
-        resource,
-        label: `${labelPrefix}: ${label}`,
-        shortLabel: label,
-        start,
-        end,
-        duration,
-        type: "Automatisch",
-        description,
-        cycle,
-        className: RESOURCE_CLASS[resource] ?? resource,
-      };
-      machineEvents[resource].push(entry);
-      machineAvailability[resource] = end;
-      machineBusy[resource] += duration;
-      allEvents.push(entry);
-      return entry;
+  const machine = (cycle, resource, label, duration, description, requestedStart) => {
+    const start = Math.max(requestedStart ?? workerTime, machineAvailability[resource]);
+    const end = start + duration;
+    const entry = {
+      resource,
+      label: `Zyklus ${cycle}: ${label}`,
+      shortLabel: label,
+      start,
+      end,
+      duration,
+      type: "Automatisch",
+      description,
+      cycle,
+      className: RESOURCE_CLASS[resource] ?? resource,
     };
+    machineEvents[resource].push(entry);
+    machineAvailability[resource] = end;
+    machineBusy[resource] += duration;
+    allEvents.push(entry);
+    return entry;
+  };
 
-    // 1. Rohling vorbereiten und Ring formen
-    manual(
-      "Rohling holen & zum Ring verbinden",
-      30,
-      "Rohling aufnehmen, vorbereiten und zum Ring schließen."
-    );
+  const describeRing = (ring) => `Ring ${ring.id}`;
 
-    // 2. Montage auf Adapterkern
-    manual(
-      "Ring auf Adapterkern aufbringen",
-      20,
-      "Ring aufsetzen, ausrichten und sichern."
-    );
-
-    // 3. Transport und Übergabe an die Presse
-    manual(
-      "Adapterkern zur Presse bringen & Ring übertragen",
-      30,
-      "Adapterkern zur Vulkanisationspresse bringen und Ring auf den Pressendorn legen."
-    );
-
-    // 4. Start des Presszyklus (Bedienhandlung + Maschinenlauf)
-    manual(
-      "Presszyklus starten",
-      10,
-      "Bedienelemente prüfen, Pressprogramm starten."
-    );
-    const pressJob = machine(
-      "Presse",
-      "Vulkanisationszyklus",
-      config.durations.press,
-      "Automatischer Vulkanisationslauf mit 300°C",
-      workerTime
-    );
-
-    // 5. Während der Presslaufzeit den vulkanisierten Ring besäumen
-    const startAfterPrevPress = Math.max(workerTime, previousPressComplete);
-    manual(
+  const attemptTrim = (cycle) => {
+    if (!readyForBesaeumen.length) return false;
+    const entry = readyForBesaeumen.shift();
+    const start = Math.max(workerTime, entry.availableTime);
+    const event = manual(
+      cycle,
       "Vulkanisierten Ring besäumen",
       45,
-      "Grate entfernen und den Vulkanisationsring nachbearbeiten.",
-      { start: startAfterPrevPress }
+      `${describeRing(entry.ring)} am Säumgerät nachbearbeiten.`,
+      { start }
     );
+    readyForCooling.push({ ring: entry.ring, availableTime: event.end });
+    return true;
+  };
 
-    // 6. Ring zum Abkühlen bringen
-    manual(
+  const attemptCoolingTransport = (cycle) => {
+    if (!readyForCooling.length) return false;
+    const entry = readyForCooling.shift();
+    const start = Math.max(workerTime, entry.availableTime);
+    const event = manual(
+      cycle,
       "Ring zur Kühlstation bringen",
       20,
-      "Besäumten Ring zur Kühlung transportieren."
+      `${describeRing(entry.ring)} nach dem Besäumen zur Kühlung transportieren.`,
+      { start }
     );
+    readyForRoughTransport.push({ ring: entry.ring, availableTime: event.end });
+    return true;
+  };
 
-    // 7. Ring mit Lösung behandeln und verpacken
+  const attemptPackaging = (cycle) => {
+    if (!readyForPackaging.length) return false;
+    const entry = readyForPackaging.shift();
+    const start = Math.max(workerTime, entry.availableTime);
     manual(
-      "Ring mit Lösung behandeln & verpacken",
+      cycle,
+      "Ring aus Lösung entnehmen & verpacken",
       40,
-      "Ring in Lösung tauchen, kontrollieren und anschließend verpacken."
+      `${describeRing(entry.ring)} nach dem Lösungsvorgang kontrollieren und verpacken.`,
+      { start }
     );
+    return true;
+  };
 
-    // 8. Gerauten Ring zur Lösungseinheit bringen
-    const startSolutionHandOver = Math.max(workerTime, machineAvailability["Lösungseinheit"]);
+  const attemptSolution = (cycle) => {
+    if (!readyForSolutionTransport.length) return false;
+    const entry = readyForSolutionTransport.shift();
+    const start = Math.max(workerTime, entry.availableTime);
     manual(
+      cycle,
       "Gerauten Ring zum Lösungsauftrag bringen",
       25,
-      "Geraute Ringe von der Raumaschine abnehmen und zur Lösungseinheit tragen.",
-      { start: startSolutionHandOver }
+      `${describeRing(entry.ring)} von der Raumaschine abnehmen und zur Lösungseinheit tragen.`,
+      { start }
     );
-
-    // 9. Lösungsauftrag starten (Bedienung + Maschinenlauf)
     manual(
+      cycle,
       "Lösungsauftrag starten",
       10,
-      "Programm starten, Parameter kontrollieren."
+      `${describeRing(entry.ring)} im Lösungsvorgang starten und Parameter prüfen.`
     );
-    machine(
+    const job = machine(
+      cycle,
       "Lösungseinheit",
       "Lösungsprozess",
       config.durations.solution,
-      "Chemischer Lösungslauf",
+      `${describeRing(entry.ring)} chemisch behandeln und imprägnieren.`,
       workerTime
     );
+    readyForPackaging.push({ ring: entry.ring, availableTime: job.end });
+    return true;
+  };
 
-    // 10. Abgekühlten Ring zur Raumaschine bringen
-    const startRoughPrep = Math.max(workerTime, machineAvailability["Rauautomat"]);
-    manual(
+  const attemptRoughTransport = (cycle) => {
+    if (!readyForRoughTransport.length) return false;
+    const entry = readyForRoughTransport.shift();
+    const start = Math.max(workerTime, entry.availableTime);
+    const event = manual(
+      cycle,
       "Abgekühlten Ring zur Raumaschine bringen",
       20,
-      "Ring aus der Kühlung holen und an der Raumaschine einlegen.",
-      { start: startRoughPrep }
+      `${describeRing(entry.ring)} aus der Kühlung holen und an der Raumaschine einlegen.`,
+      { start }
     );
+    readyForRoughStart.push({ ring: entry.ring, availableTime: event.end });
+    return true;
+  };
 
-    // 11. Start Rauvorgang mit Folienauftrag (Bedienung + Maschinenlauf)
+  const attemptRoughStart = (cycle) => {
+    if (!readyForRoughStart.length) return false;
+    const entry = readyForRoughStart.shift();
+    const start = Math.max(workerTime, entry.availableTime);
     manual(
+      cycle,
       "Rauvorgang mit Folienauftrag starten",
       10,
-      "Rauprogramm inklusive Folienauftrag konfigurieren und starten."
+      `${describeRing(entry.ring)} am Rauautomat inklusive Folienauftrag konfigurieren und starten.`,
+      { start }
     );
-    machine(
+    const job = machine(
+      cycle,
       "Rauautomat",
       "Rauvorgang mit Folienauftrag",
       config.durations.roughening,
-      "Automatischer Rauvorgang inkl. Folienauftrag",
+      `${describeRing(entry.ring)} automatisch anrauen und Folie aufbringen.`,
       workerTime
     );
+    readyForSolutionTransport.push({ ring: entry.ring, availableTime: job.end });
+    return true;
+  };
 
-    // 12. Optional: zusätzlichen Rauvorgang starten
-    if (config.includeOptional) {
-      manual(
-        "Zusätzlichen Rauvorgang starten",
-        10,
-        "Optionalen Rauvorgang ohne Folie starten."
-      );
-      machine(
-        "RauautomatPlus",
-        "Zusätzlicher Rauvorgang",
-        config.durations.extraRoughening,
-        "Separater Rauvorgang ohne Folie",
-        workerTime
-      );
+  const processPipelineOnce = (cycle) => {
+    let progressed = false;
+    if (attemptTrim(cycle)) progressed = true;
+    if (attemptCoolingTransport(cycle)) progressed = true;
+    if (attemptPackaging(cycle)) progressed = true;
+    if (attemptSolution(cycle)) progressed = true;
+    if (attemptRoughTransport(cycle)) progressed = true;
+    if (attemptRoughStart(cycle)) progressed = true;
+    return progressed;
+  };
+
+  const processPipelineUntilIdle = (cycle) => {
+    while (processPipelineOnce(cycle)) {
+      /* iterate until keine weiteren Schritte möglich */
     }
+  };
 
-    // 13. Entnahme aus der Presse (nach Ablauf des Zyklus)
-    const unloadStart = Math.max(workerTime, pressJob.end);
+  const attemptUnload = (cycle) => {
+    if (!ringsAwaitingUnload.length) return false;
+    const next = ringsAwaitingUnload[0];
+    const start = Math.max(workerTime, next.availableTime);
     manual(
+      cycle,
       "Ring aus Presse entnehmen & zum Säumgerät bringen",
       30,
-      "Ring nach Zyklusende entnehmen und dem Säumgerät zuführen.",
-      { start: unloadStart }
+      `${describeRing(next.ring)} nach Zyklusende aus der Presse holen und dem Säumgerät zuführen.`,
+      { start }
+    );
+    readyForBesaeumen.push({ ring: next.ring, availableTime: workerTime });
+    ringsAwaitingUnload.shift();
+    return true;
+  };
+
+  for (let cycle = 1; cycle <= config.cycles; cycle += 1) {
+    ringCounter += 1;
+    const ring = { id: ringCounter };
+
+    manual(
+      cycle,
+      "Rohling holen & zum Ring verbinden",
+      30,
+      `${describeRing(ring)} vorbereiten und schließen.`
     );
 
-    previousPressComplete = pressJob.end;
+    manual(
+      cycle,
+      "Ring auf Adapterkern aufbringen",
+      20,
+      `${describeRing(ring)} auf den Adapterkern setzen und sichern.`
+    );
+
+    manual(
+      cycle,
+      "Adapterkern zur Presse bringen & Ring übertragen",
+      30,
+      `${describeRing(ring)} zur Vulkanisationspresse transportieren und auf den Pressendorn legen.`
+    );
+
+    manual(
+      cycle,
+      "Presszyklus starten",
+      10,
+      `Pressprogramm für ${describeRing(ring)} starten.`
+    );
+    const pressJob = machine(
+      cycle,
+      "Presse",
+      "Vulkanisationszyklus",
+      config.durations.press,
+      `${describeRing(ring)} unter Druck vulkanisieren.`,
+      workerTime
+    );
+    ringsAwaitingUnload.push({ ring, availableTime: pressJob.end });
+
+    processPipelineUntilIdle(cycle);
+    attemptUnload(cycle);
   }
+
+  const completionCycle = config.cycles + 1;
+  let postProgress = false;
+  do {
+    postProgress = false;
+    if (attemptUnload(completionCycle)) {
+      postProgress = true;
+    }
+    if (processPipelineOnce(completionCycle)) {
+      postProgress = true;
+    }
+  } while (postProgress);
 
   const totalDuration = Math.max(
     workerEvents.length ? workerEvents[workerEvents.length - 1].end : 0,
@@ -510,11 +549,6 @@ function renderMetrics(simulation) {
       label: "Rauautomat-Auslastung",
       hint: (busy) => `${formatSeconds(busy)} automatisierter Rauvorgang mit Folienauftrag.`,
     },
-    {
-      key: "RauautomatPlus",
-      label: "Zusatz-Rau-Auslastung",
-      hint: (busy) => `${formatSeconds(busy)} zusätzlicher Rauvorgang ohne Folie.`,
-    },
   ];
 
   machineMetricConfig.forEach(({ key, label, hint }) => {
@@ -620,14 +654,20 @@ function renderGantt(simulation) {
   axis.appendChild(axisScale);
   const axisLabels = document.createElement("div");
   axisLabels.className = "gantt__axis-labels";
-  const tickCount = 6;
-  for (let i = 0; i <= tickCount; i += 1) {
-    const fraction = i / tickCount;
+  const ticks = generateAxisTicks(simulation.totalDuration);
+  const safeDuration = Math.max(simulation.totalDuration, 1);
+  ticks.forEach((value) => {
+    const position = (value / safeDuration) * 100;
+    const tick = document.createElement("span");
+    tick.className = "gantt__axis-tick";
+    tick.style.left = `${position}%`;
+    axisScale.appendChild(tick);
+
     const label = document.createElement("span");
-    label.style.left = `${fraction * 100}%`;
-    label.textContent = `${Math.round(simulation.totalDuration * fraction)} s`;
+    label.style.left = `${position}%`;
+    label.textContent = formatAxisLabel(value);
     axisLabels.appendChild(label);
-  }
+  });
   axis.appendChild(axisLabels);
   content.appendChild(axis);
 
@@ -641,7 +681,6 @@ function renderGantt(simulation) {
     { name: "Presse", label: "Vulkanisationspresse" },
     { name: "Lösungseinheit", label: "Lösungseinheit" },
     { name: "Rauautomat", label: "Rauautomat" },
-    { name: "RauautomatPlus", label: "Rauautomat (optional)" },
   ];
 
   machines.forEach((machine) => {
@@ -677,13 +716,14 @@ function createGanttRow(label, events, totalDuration) {
 
   const timeline = document.createElement("div");
   timeline.className = "gantt-row__timeline";
+  const safeDuration = Math.max(totalDuration, 1);
 
   events.forEach((event) => {
     const bar = document.createElement("div");
     const classSuffix = event.className ?? RESOURCE_CLASS[event.resource] ?? "worker";
     bar.className = `gantt-bar gantt-bar--${classSuffix}`;
-    bar.style.left = `${(event.start / totalDuration) * 100}%`;
-    bar.style.width = `${(event.duration / totalDuration) * 100}%`;
+    bar.style.left = `${(event.start / safeDuration) * 100}%`;
+    bar.style.width = `${(event.duration / safeDuration) * 100}%`;
     bar.textContent = event.shortLabel ?? event.label;
     bar.title = `${event.label}\nStart: ${event.start.toFixed(0)} s\nEnde: ${event.end.toFixed(0)} s`;
     timeline.appendChild(bar);
@@ -702,7 +742,6 @@ function createLegend() {
     { className: "Presse", label: "Vulkanisationspresse" },
     { className: "Loesungseinheit", label: "Lösungseinheit" },
     { className: "Rauautomat", label: "Rauautomat mit Folienauftrag" },
-    { className: "RauautomatPlus", label: "Zusätzlicher Rauvorgang" },
   ];
 
   items.forEach((item) => {
@@ -732,6 +771,43 @@ function formatSeconds(value) {
     return `${seconds} s`;
   }
   return `${minutes} min ${seconds.toString().padStart(2, "0")} s`;
+}
+
+function formatAxisLabel(value) {
+  const rounded = Math.max(0, Math.round(value));
+  if (rounded >= 600) {
+    const minutes = Math.round(rounded / 60);
+    return `${minutes} min`;
+  }
+  if (rounded >= 60) {
+    const minutes = Math.floor(rounded / 60);
+    const seconds = rounded % 60;
+    if (seconds === 0) {
+      return `${minutes} min`;
+    }
+    return `${minutes}:${seconds.toString().padStart(2, "0")} min`;
+  }
+  return `${rounded} s`;
+}
+
+function generateAxisTicks(totalDuration) {
+  const safeDuration = Math.max(totalDuration, 1);
+  const spacing = chooseNiceSpacing(safeDuration / 8);
+  const ticks = new Set([0, Number(totalDuration.toFixed(2))]);
+  for (let value = spacing; value < safeDuration; value += spacing) {
+    const clamped = Math.min(value, totalDuration);
+    ticks.add(Number(clamped.toFixed(2)));
+  }
+  return Array.from(ticks).sort((a, b) => a - b);
+}
+
+function chooseNiceSpacing(target) {
+  const niceSteps = [5, 10, 15, 20, 30, 60, 90, 120, 180, 240, 300, 360, 480, 600, 900, 1200];
+  for (const step of niceSteps) {
+    if (target <= step) return step;
+  }
+  const largest = niceSteps[niceSteps.length - 1];
+  return Math.ceil(target / largest) * largest;
 }
 
 function buildCsv(simulation) {
