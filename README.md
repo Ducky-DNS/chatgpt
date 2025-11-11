@@ -1,48 +1,65 @@
-# Simulation der Ringproduktion als Webanwendung
+# Simulation des manuellen Produktionsablaufs zur Ringherstellung
 
-Diese Version des Projekts besteht aus einer einzelnen HTML-Seite, die den
-vollständigen manuellen Produktionsablauf zur Ringherstellung simuliert. Das
-Tool ist für die Auswertung der Auslastung eines Mitarbeiters ausgelegt, der
-mehrere Maschinen (Presse, Lösungseinheit, Raumaschinen) manuell bedient und
-parallel Nachbearbeitungsschritte durchführt. Die Ergebnisse werden direkt im
-Browser als Kennzahlen, Timeline-Tabellen und Gantt-Diagramm visualisiert.
+Dieses Projekt enthält ein Kommandozeilenprogramm, das den kompletten Arbeitszyklus
+bei der manuellen Ringherstellung mit Vulkanisation, Rauvorgängen und Nachbearbeitung
+simuliert. Eine einzelne Fachkraft bedient alle Stationen und Maschinen. Die Simulation
+zeigt, wann welche Arbeitsschritte stattfinden, wie lange sie dauern und wie stark
+Mitarbeiter und Maschinen ausgelastet sind.
 
 ## Funktionsumfang
 
-* Interaktive Eingabe der Anzahl zu simulierender Zyklen sowie zentraler
-  Prozessdauern (Presse, Lösung, optionale Rauvorgänge).
-* Abbildung sämtlicher Handgriffe des Mitarbeiters inklusive Wartezeiten und
-  Leerlauf.
-* Automatische Maschinenabläufe für Vulkanisation, Lösung, Rau- und
-  Zusatz-Rauvorgang mit Ressourcenblockierung.
-* Kennzahlenkarten (Gesamtdauer, Auslastungen, Zyklusmittelwerte).
-* Tabellenansicht der Mitarbeiter- und Maschinenereignisse.
-* Farblich hervorgehobenes Gantt-Diagramm mit Legende und Zeitachse.
+* Abbildung aller Schritte vom Formen des Rohlings über den Presszyklus bis hin zur
+  Verpackung eines fertigen Rings.
+* Parallel laufende automatische Maschinenprozesse (Presse, Raumaschine,
+  Lösungseinheit) inklusive Wartezeiten und Blockaden.
+* Konfigurierbare Zyklus- und Prozessdauern, optionaler zusätzlicher Rauvorgang.
+* Zusammenfassung mit Kennzahlen zu Auslastung, Leerlaufzeiten und Maschinenbelegung.
+* Tabellarische Ausgabe der Mitarbeitertimeline sowie aller Maschinenereignisse.
+* ASCII-Gantt-Diagramm, das den kompletten Zeitverlauf von Mitarbeiter und Maschinen visualisiert.
+* Export der Ergebnisse als CSV (Timeline + Kennzahlen) oder JSON (Timeline,
+  Maschinen, Ring-Lebensläufe, Kennzahlen).
+
+## Voraussetzungen
+
+* Python 3.10 oder neuer.
+* Es sind keine zusätzlichen Bibliotheken nötig.
 
 ## Nutzung
 
-1. Öffne `index.html` in einem aktuellen Browser (z. B. Chrome, Edge,
-   Firefox). Eine Server-Installation ist nicht notwendig.
-2. Wähle die gewünschte Anzahl an Zyklen (Standard: 3) und passe bei Bedarf die
-   Prozessdauern an.
-3. Starte die Simulation per Klick auf „Simulation starten“.
-4. Die Ergebnisse erscheinen unmittelbar darunter; das Gantt-Diagramm skaliert
-   automatisch auf die Gesamtdauer.
-
-## Struktur
-
-```
-index.html        # Einstiegsseite mit Markup für Steuerung, Ergebnisse und Vorlagen
-assets/style.css  # Gestaltung der Seite, Tabellen und Gantt-Balken
-assets/app.js     # Simulationslogik, Rendering der Ausgaben
+```bash
+python main.py --help
 ```
 
-## Anpassungen
+Beispiel: drei Produktionszyklen mit deaktiviertem optionalen Rauvorgang und Export
+als JSON-Datei.
 
-* Die Standarddauern lassen sich im Formular ändern (die Eingabe wird auf
-  sinnvolle Grenzen geclamped).
-* Zusätzliche Visualisierungen oder Exportfunktionen können direkt im Skript
-  (`assets/app.js`) ergänzt werden.
+```bash
+python main.py --cycles 3 --skip-optional-roughening --export report.json --format json
+```
+
+Wichtige Optionen:
+
+* `--cycles`: Anzahl der simulierten Produktionszyklen (Standard: 3).
+* `--press-duration`: Laufzeit der Vulkanisationspresse in Sekunden (Standard: 300).
+* `--cooling-duration`: Automatische Abkühlzeit nach der Kühlstation in Sekunden.
+* `--solution-duration`: Dauer des Lösungsauftrags in Sekunden.
+* `--roughening-duration`: Maschinenzeit für den Rauvorgang.
+* `--extra-roughening-duration`: Dauer des optionalen Zusatz-Rauvorgangs.
+* `--skip-optional-roughening`: Deaktiviert den zusätzlichen Rauvorgang.
+* `--export / --format`: Exportpfad und -format (`csv` oder `json`).
+
+## Exportformate
+
+* **CSV**: Mitarbeitertimeline mit Start-, End- und Dauerwerten sowie Kennzahlen als
+  zusätzlicher Abschnitt.
+* **JSON**: Vollständiger Simulationslauf inklusive Kennzahlen, Mitarbeitertimeline,
+  Maschinenbelegung und detaillierten Zeitstempeln je Ring.
+
+## Tests
+
+```bash
+python -m unittest discover
+```
 
 ## Lizenz
 
