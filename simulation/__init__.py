@@ -1,12 +1,23 @@
-"""Top-level package for the SIR epidemic simulation program."""
+"""Manual production workflow simulation package."""
 
-from .config import SimulationConfig, parse_args
-from .sir import SIRSimulation, SIRState, calculate_metrics
+from .config import SimulationConfig, TaskDurations, parse_args
+from .workflow import (
+    MachineEvent,
+    ProductionSimulation,
+    RingLifecycle,
+    SimulationMetrics,
+    SimulationResult,
+    WorkerEvent,
+)
 
 __all__ = [
+    "MachineEvent",
+    "ProductionSimulation",
+    "RingLifecycle",
     "SimulationConfig",
-    "SIRSimulation",
-    "SIRState",
-    "calculate_metrics",
+    "SimulationMetrics",
+    "SimulationResult",
+    "TaskDurations",
+    "WorkerEvent",
     "parse_args",
 ]
