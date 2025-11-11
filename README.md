@@ -15,6 +15,7 @@ Mitarbeiter und Maschinen ausgelastet sind.
 * Konfigurierbare Zyklus- und Prozessdauern, optionaler zusätzlicher Rauvorgang.
 * Zusammenfassung mit Kennzahlen zu Auslastung, Leerlaufzeiten und Maschinenbelegung.
 * Tabellarische Ausgabe der Mitarbeitertimeline sowie aller Maschinenereignisse.
+* ASCII-Gantt-Diagramm, das den kompletten Zeitverlauf von Mitarbeiter und Maschinen visualisiert.
 * Export der Ergebnisse als CSV (Timeline + Kennzahlen) oder JSON (Timeline,
   Maschinen, Ring-Lebensläufe, Kennzahlen).
 

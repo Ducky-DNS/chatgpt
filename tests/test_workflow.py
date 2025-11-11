@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from simulation import ProductionSimulation, SimulationConfig, TaskDurations
+from simulation.reporting import render_gantt_chart
 
 
 def build_config(**overrides):
@@ -66,6 +67,17 @@ class WorkflowSimulationTests(unittest.TestCase):
         self.assertTrue(idle_segments)
         total_idle = sum(segment.duration for segment in idle_segments)
         self.assertGreater(total_idle, 0)
+
+    def test_gantt_chart_contains_expected_sections(self) -> None:
+        config = build_config()
+        result = ProductionSimulation(config).run()
+
+        chart = render_gantt_chart(result, width=40)
+
+        self.assertIn("Gantt-Diagramm", chart)
+        self.assertIn("Mitarbeiter", chart)
+        self.assertIn("Presse", chart)
+        self.assertIn("Legende", chart)
 
 
 if __name__ == "__main__":

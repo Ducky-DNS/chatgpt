@@ -8,6 +8,7 @@ from simulation import ProductionSimulation, SimulationResult, parse_args
 from simulation.exporters import export_results
 from simulation.reporting import (
     format_summary,
+    render_gantt_chart,
     render_machine_overview,
     render_worker_timeline,
 )
@@ -25,6 +26,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     print(render_worker_timeline(result.timeline))
     print()
     print(render_machine_overview(result.machines))
+    print()
+    print(render_gantt_chart(result))
 
     if config.export_path:
         export_results(result, config.export_path, config.export_format)
